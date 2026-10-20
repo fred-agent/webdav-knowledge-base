@@ -1,0 +1,7 @@
+[run]
+branch = True
+source = webdav_kb
+
+[report]
+omit =
+    tests/*
