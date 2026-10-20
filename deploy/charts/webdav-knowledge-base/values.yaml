@@ -1,0 +1,74 @@
+# =============================================================================
+# The WebDAV Knowledge Base: Fred's generic knowledge-base chart with this pod's
+# defaults. Every value below belongs to that chart, hence `knowledge-base:`;
+# `helm show values oci://ghcr.io/thalesgroup/fred-helm/knowledge-base` lists the
+# rest. The addresses name the services of a default Fred install; README.md says
+# what a deployment must set.
+# =============================================================================
+knowledge-base:
+  # This release's image; chart X.Y.Z runs vX.Y.Z (CI checks they agree).
+  image:
+    repository: ghcr.io/fred-agent/webdav-knowledge-base
+    tag: "v0.4.0"
+
+  # The pod's configuration (fred-sdk's PodConfiguration plus this pod's own
+  # `webdav:` section, which the chart passes through).
+  configuration:
+    # This pod's identity in metrics and logs (`service` label and log field).
+    # One per deployment: give a second deployment its own slug.
+    app:
+      runtime_id: webdav-kb
+    knowledge_base:
+      prefix: fred.webdav
+      control_plane_url: http://control-plane-backend:8222/control-plane/v1
+      knowledge_flow_url: http://knowledge-flow-backend:8000/knowledge-flow/v1
+    security:
+      m2m:
+        enabled: true
+        realm_url: http://keycloak/realms/app
+        client_id: kb-fred.webdav
+        secret_env_var: FRED_KB_CLIENT_SECRET # pragma: allowlist secret (environment variable name)
+    scheduler:
+      temporal:
+        host: temporal:7233
+        namespace: default
+    # Read-only Prometheus endpoints served by the `run` worker, bound to all
+    # interfaces so the chart's metrics Service can reach them.
+    observability:
+      kpi:
+        # fred_kb_* series: runs, items, issues, calls to Fred, ingestion waits.
+        prometheus:
+          enabled: true
+          address: 0.0.0.0
+          port: 9000
+      temporal:
+        # temporal_* series from the workflow engine: polls, task latencies, slots.
+        prometheus:
+          enabled: true
+          address: 0.0.0.0
+          port: 9001
+    # The deployment's choices, the same for every instance the pod serves; a
+    # team's choices (share, files, profile) are on its form in Fred.
+    webdav:
+      # Documents one run fetches and hands to Fred at once (1-64); times
+      # 10 MiB, a run's memory ceiling.
+      concurrency: 4
+      # How long a run follows one document's ingestion before reporting it
+      # `ingestion_pending` (a warning; the next run leaves it be).
+      ingestion_wait_seconds: 600
+
+  # The client secret, from a Secret the deployment owns (here `knowledge-base-m2m`,
+  # key `client-secret`). To trust a private CA for the WebDAV server, add to this
+  # list (a list replaces, so restate the secret) and mount the PEM:
+  #
+  #   extraEnvVars:
+  #     - { name: FRED_KB_CLIENT_SECRET, valueFrom: { secretKeyRef: { name: knowledge-base-m2m, key: client-secret } } }
+  #     - { name: WEBDAV_KB_CA_FILE, value: /etc/ssl/private-ca/corporate-root.pem }
+  #   extraVolumes:
+  #     - { name: webdav-ca, configMap: { name: corporate-root-ca } }
+  #   extraVolumeMounts:
+  #     - { name: webdav-ca, mountPath: /etc/ssl/private-ca, readOnly: true }
+  extraEnvVars:
+    - name: FRED_KB_CLIENT_SECRET
+      valueFrom:
+        secretKeyRef: { name: knowledge-base-m2m, key: client-secret } # pragma: allowlist secret (Secret reference)

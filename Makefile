@@ -171,11 +171,11 @@ share-clean: ## Remove the share's container and image
 KB                    ?= webdav
 KB_PACKAGE            ?= webdav_kb
 # The same reference CI publishes (.github/workflows), tagged with this package's
-# version, which deploy/values.yaml names. Another registry: DOCKER_REGISTRY=...
+# version (vX.Y.Z), which the chart runs. Another registry: DOCKER_REGISTRY=...
 VERSION               := $(shell sed -n 's/^version = "\(.*\)"/\1/p' pyproject.toml | head -n 1)
 DOCKER_REGISTRY       ?= ghcr.io/fred-agent
 DOCKER_IMAGE_NAME     ?= $(DOCKER_REGISTRY)/webdav-knowledge-base
-DOCKER_IMAGE_TAG      ?= $(VERSION)
+DOCKER_IMAGE_TAG      ?= v$(VERSION)
 DOCKER_IMAGE          ?= $(DOCKER_IMAGE_NAME):$(DOCKER_IMAGE_TAG)
 DOCKER_CONTAINER_NAME ?= webdav-knowledge-base
 DOCKERFILE_PATH       ?= Dockerfile

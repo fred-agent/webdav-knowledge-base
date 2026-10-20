@@ -18,8 +18,9 @@ here.
 | `config/` | `configuration.yaml` (a shape to copy, pointed at `localhost`) and `env.template` (the one secret). |
 | `local-webdav/`, `dockerfiles/Dockerfile.webdav-share` | An Apache `mod_dav` share to run against (`make share-run`). A test fixture, never deployed. |
 | `Dockerfile` | The deployable image: `publish`, then `run`. |
-| `deploy/values.yaml` | What every deployment starts from, for Fred's generic `knowledge-base` chart (no chart of its own). |
-| `deploy/k3d/` | The contract with fred-deployment-factory's local k3d (`make k3d-app DIR=<this checkout>`). |
+| `deploy/charts/webdav-knowledge-base/` | The chart: Fred's generic `knowledge-base` chart as a dependency, with this pod's image and defaults under `knowledge-base:`. |
+| `deploy/check-version` | pyproject.toml, the chart and its image tag name one version; both release workflows run it. |
+| `deploy/k3d/build` | Builds the image for fred-deployment-factory's local k3d (`make k3d-app APP=webdav-kb DIR=<this checkout>`); the k3d values live in the factory. |
 | `.github/workflows/` | Publishes the image to `ghcr.io/fred-agent`: a release on `code/vX.Y.Z`, `swift-dev` on every push to `swift`. |
 
 ## Commands
@@ -54,12 +55,12 @@ make dev-local                      # fred's libraries from your checkout at FRE
   `fred.webdav.folder`, prefix `fred.webdav`, client `kb-fred.webdav`:
   Fred binds the prefix to the first client that publishes it, so renaming
   any of them breaks existing deployments.
-- **Versions are tied to tags.** `code/vX.Y.Z` must equal
-  `pyproject.toml`'s version, and so must `deploy/values.yaml`'s `image.tag`; `make
-  docker-build` builds that same reference locally. Never create a tag unless asked: it
-  publishes what other people deploy.
+- **One version, two tags.** `pyproject.toml`'s X.Y.Z is the chart's `version`, and vX.Y.Z its
+  `appVersion` and the image tag in its `values.yaml` (`deploy/check-version`). `code/vX.Y.Z`
+  publishes the image vX.Y.Z, `chart/vX.Y.Z` the chart X.Y.Z; `make docker-build` builds that same
+  reference locally. Never create a tag unless asked: it publishes what other people deploy.
 - **Secrets never enter git.** `config/.env` is ignored; a deployment reads the
-  client secret from a Kubernetes Secret (`extraEnvVars` in `deploy/values.yaml`).
+  client secret from a Kubernetes Secret (`extraEnvVars` in the chart's `values.yaml`).
 
 ## Working rules
 

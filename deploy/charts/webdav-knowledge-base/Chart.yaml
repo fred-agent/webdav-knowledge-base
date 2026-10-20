@@ -1,0 +1,25 @@
+apiVersion: v2
+name: webdav-knowledge-base
+description: A Fred Knowledge Base mirroring a folder shared over WebDAV into a Fred library
+type: application
+# A release tag chart/vX.Y.Z publishes version X.Y.Z, appVersion vX.Y.Z: the image
+# values.yaml names. Both stay equal to pyproject.toml's version (CI checks).
+version: 0.4.0
+appVersion: "v0.4.0"
+home: https://github.com/fred-agent/webdav-knowledge-base
+icon: https://site.fredlab.dev/images/fred.svg
+sources:
+  - https://github.com/fred-agent/webdav-knowledge-base
+keywords:
+  - fred
+  - knowledge-base
+  - webdav
+annotations:
+  artifacthub.io/license: Apache-2.0
+dependencies:
+  # Fred's generic Knowledge Base pod: the Deployment, the publish Job, metrics.
+  # Its values are this chart's, under `knowledge-base:`. 3.8.0 is the first
+  # release that can be a dependency.
+  - name: knowledge-base
+    version: 3.8.0
+    repository: oci://ghcr.io/thalesgroup/fred-helm

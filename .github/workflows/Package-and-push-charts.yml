@@ -1,0 +1,77 @@
+name: Package and push Helm Chart
+
+on:
+  push:
+    tags: ["chart/v*"]
+
+env:
+  REGISTRY: ghcr.io
+  CHART: webdav-knowledge-base
+
+jobs:
+  package-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v5
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v5
+
+      # chart/v0.4.0 publishes chart 0.4.0, which runs image v0.4.0: the version
+      # is checked, not injected, so the repository always says what ships.
+      - name: Check the release version
+        run: deploy/check-version "${GITHUB_REF_NAME#chart/v}"
+
+      - name: Login to Helm registry
+        run: |
+          echo ${{ secrets.GITHUB_TOKEN }} | helm registry login ${{ env.REGISTRY }} --username ${{ github.actor }} --password-stdin
+
+      # Fred's knowledge-base chart, at the version Chart.lock pins, goes inside
+      # the package: installing it needs no other registry.
+      - name: Package the chart
+        run: |
+          helm dependency build deploy/charts/${{ env.CHART }}
+          helm lint deploy/charts/${{ env.CHART }}
+          helm package deploy/charts/${{ env.CHART }} --destination ./packages
+
+      - name: Push the chart
+        run: |
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          helm push ./packages/${{ env.CHART }}-${GITHUB_REF_NAME#chart/v}.tgz \
+            oci://${{ env.REGISTRY }}/${OWNER}/${{ env.CHART }}-helm
+
+  create-release:
+    needs: package-and-push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: dummy # only the version is wanted
+          tags: |
+            type=match,pattern=chart/v?(.*),group=1
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Helm Chart Release ${{ steps.meta.outputs.version }}
+          body: |
+            ## Setup
+
+            ```bash
+            # What to configure: the client secret, addresses, Fred's publishers entry
+            helm show readme oci://ghcr.io/fred-agent/${{ env.CHART }}-helm/${{ env.CHART }} --version ${{ steps.meta.outputs.version }}
+            # Install chart
+            helm install ${{ env.CHART }} oci://ghcr.io/fred-agent/${{ env.CHART }}-helm/${{ env.CHART }} --version ${{ steps.meta.outputs.version }}
+            ```
+          draft: false
+          prerelease: ${{ contains(steps.meta.outputs.version, '-') }}

@@ -4,7 +4,7 @@ set -Eeuo pipefail
 # Build this Knowledge Base's image for the local k3d instance
 # (fred-deployment-factory's `make k3d-app`). Writes $K3D_APP_OUT/images.txt,
 # the content-tagged reference to copy into the cluster, and
-# $K3D_APP_OUT/images.yaml, the Helm values selecting it.
+# $K3D_APP_OUT/images.yaml, the chart values selecting it (under `knowledge-base:`).
 kb="$(cd "$(dirname "$0")/../.." && pwd)"
 out="${K3D_APP_OUT:?the factory provides K3D_APP_OUT}"
 
@@ -22,4 +22,4 @@ tag="k3d-${id#sha256:}"; tag="${tag:0:16}"
 docker tag "$image" "$repository:$tag"
 echo "Built: $repository:$tag"
 printf '%s\n' "$repository:$tag" >"$out/images.txt"
-printf 'image: { repository: "%s", tag: "%s" }\n' "$repository" "$tag" >"$out/images.yaml"
+printf 'knowledge-base: { image: { repository: "%s", tag: "%s" } }\n' "$repository" "$tag" >"$out/images.yaml"

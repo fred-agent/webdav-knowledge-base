@@ -12,3 +12,6 @@ config/.env
 .env
 *.pem
 *.key
+
+# Chart dependencies, fetched by helm dependency build (Chart.lock pins them).
+deploy/charts/*/charts/

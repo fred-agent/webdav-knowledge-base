@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+# One version for a release: pyproject.toml's X.Y.Z is the chart's version, and
+# vX.Y.Z its appVersion and the image values.yaml runs. With an argument (the
+# release tag's X.Y.Z), it must be that version too. Run by both release workflows.
+root="$(cd "$(dirname "$0")/.." && pwd)"
+chart="$root/deploy/charts/webdav-knowledge-base"
+
+project="$(sed -n 's/^version = "\([^"]*\)"/\1/p' "$root/pyproject.toml" | head -n 1)"
+version="$(sed -n 's/^version: *"\{0,1\}\([^"]*\)"\{0,1\}$/\1/p' "$chart/Chart.yaml")"
+app="$(sed -n 's/^appVersion: *"\{0,1\}\([^"]*\)"\{0,1\}$/\1/p' "$chart/Chart.yaml")"
+image="$(sed -n 's/^    tag: *"\{0,1\}\([^"]*\)"\{0,1\}$/\1/p' "$chart/values.yaml" | head -n 1)"
+expected="${1:-$project}"
+
+failed=0
+check() { [[ "$2" == "$3" ]] || { echo "$1 is '$2', expected '$3'" >&2; failed=1; }; }
+check "pyproject.toml version" "$project" "$expected"
+check "Chart.yaml version" "$version" "$expected"
+check "Chart.yaml appVersion" "$app" "v$expected"
+check "values.yaml knowledge-base.image.tag" "$image" "v$expected"
+(( failed == 0 )) || exit 1
+echo "Version $expected: pyproject.toml, chart and image agree"

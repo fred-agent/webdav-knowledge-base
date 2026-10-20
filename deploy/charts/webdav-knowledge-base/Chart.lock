@@ -1,0 +1,6 @@
+dependencies:
+- name: knowledge-base
+  repository: oci://ghcr.io/thalesgroup/fred-helm
+  version: 3.8.0
+digest: sha256:294ebca8e1cb66a2b38fce6827ba3282e286287240e450af62d66f9bda41e90e
+generated: "2026-10-20T16:17:03.94858831+02:00"

@@ -1,0 +1,19 @@
+{{- $kb := index .Values "knowledge-base" -}}
+{{- $fullname := include "knowledge-base.fullname" (dict "Values" $kb "Release" .Release "Chart" (dict "Name" "knowledge-base")) -}}
+The WebDAV Knowledge Base `{{ $kb.configuration.app.runtime_id }}` is deployed in namespace {{ .Release.Namespace }}.
+
+Fred accepts its declaration only from a listed client: add this entry to
+`knowledge_bases.publishers` in the Fred chart's values
+(applications.control-plane-backend.configuration), then restart the Control Plane:
+
+    - client_id: {{ $kb.configuration.security.m2m.client_id }}
+      prefix: {{ $kb.configuration.knowledge_base.prefix }}
+
+The `publish` Job then declares it after each install, upgrade and rollback, and a
+platform admin enables it for teams (Admin > Features > Knowledge Bases).
+
+Worker (opens no inbound port; it receives runs through Temporal):
+  kubectl -n {{ .Release.Namespace }} logs deployment/{{ $fullname }}
+
+Declaration:
+  kubectl -n {{ .Release.Namespace }} logs job/{{ $fullname }}-publish

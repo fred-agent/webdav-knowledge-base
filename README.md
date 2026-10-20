@@ -426,30 +426,31 @@ make docker-build
 make docker-smoke
 ```
 
-The image uses [Dockerfile](Dockerfile). The pod deploys with Fred's generic
-`knowledge-base` chart and [`deploy/values.yaml`](deploy/values.yaml), what every
-deployment of this pod starts from; a deployment adds its own values (addresses,
-the client secret, its registry and tag):
+The image uses [Dockerfile](Dockerfile). The pod deploys with its chart,
+[`deploy/charts/webdav-knowledge-base`](deploy/charts/webdav-knowledge-base/README.md):
+Fred's generic `knowledge-base` chart as a dependency, with this pod's image and
+defaults. A deployment adds its own values (addresses, the client secret):
 
 ```bash
-helm install knowledge-base-webdav oci://ghcr.io/thalesgroup/fred-helm/knowledge-base \
-  --version <fred chart version> -f deploy/values.yaml -f my-values.yaml
+helm install webdav-knowledge-base \
+  oci://ghcr.io/fred-agent/webdav-knowledge-base-helm/webdav-knowledge-base \
+  --version <version> -n fred -f my-values.yaml
 ```
 
-`helm show readme` on that chart lists what each deployment must set.
+The chart's README (`helm show readme` on it) lists what each deployment must set,
+and the install prints the entry Fred's control plane needs.
 
-`make docker-build` builds the very reference CI publishes,
-`ghcr.io/fred-agent/webdav-knowledge-base`, tagged with `pyproject.toml`'s
-version, which `deploy/values.yaml` names. A tag publishes it
-([`.github/workflows/Build-and-push-docker.yml`](.github/workflows/Build-and-push-docker.yml)):
+One version names a release: `pyproject.toml`'s X.Y.Z is the chart's version, and
+vX.Y.Z the image it runs ([`deploy/check-version`](deploy/check-version)). Two tags
+publish it, the image first:
 
 ```text
-code/v0.4.0  -> ghcr.io/fred-agent/webdav-knowledge-base:0.4.0
+code/v0.4.0   -> ghcr.io/fred-agent/webdav-knowledge-base:v0.4.0
+chart/v0.4.0  -> oci://ghcr.io/fred-agent/webdav-knowledge-base-helm/webdav-knowledge-base:0.4.0
 ```
 
-The tag must match the version in `pyproject.toml`, and so must
-`deploy/values.yaml`'s `image.tag`. Every push to `swift` also publishes
-`swift-dev` and `swift-dev-<commit>`. To push to a registry of your own instead:
+Every push to `swift` also publishes the image `swift-dev`. `make docker-build` builds
+the release's reference locally; to push to a registry of your own instead:
 
 ```bash
 make docker-build docker-smoke docker-push DOCKER_REGISTRY=registry.example.com/team
@@ -492,21 +493,21 @@ against a share nobody has tried yet.
 
 ### On the local k3d instance
 
-`fred-deployment-factory` deploys this Knowledge Base next to a local Fred, from
-[`deploy/k3d/`](deploy/k3d/), once Fred itself is deployed there:
+`fred-deployment-factory` deploys this Knowledge Base next to a local Fred, once Fred
+itself is deployed there:
 
 ```bash
 cd ../fred-deployment-factory   # wherever your checkout is
-make k3d-app DIR=<this checkout>
+make k3d-app APP=webdav-kb                                 # the published release
+make k3d-app APP=webdav-kb DIR=../webdav-knowledge-base    # this checkout
 ```
 
-It builds the image (`deploy/k3d/build`), creates the `kb-fred.webdav` client and
-its secret in `fred-secrets` (`deploy/k3d/identities.yaml`), and installs Fred's
-`knowledge-base` chart with `deploy/values.yaml`, then
-[`deploy/k3d/values.yaml`](deploy/k3d/values.yaml), which only names the k3d services
-and that secret. With `FRED_LIBS=local` and `FRED_REPO` set to your fred checkout, the
-image and the chart come from that checkout instead (fred-deployment-factory's
-docs/LOCAL-DEVELOPMENT.md, "Work on unreleased fred").
+With `DIR`, it builds the image ([`deploy/k3d/build`](deploy/k3d/build)) and installs
+this checkout's chart. The factory owns everything else: the `kb-fred.webdav` client and
+its secret, the k3d addresses (`k3d-apps/webdav-kb/`), and the `publishers` entry in its
+Fred values. With `FRED_LIBS=local` and `FRED_REPO` set to your fred checkout, the image
+and the `knowledge-base` dependency come from that checkout instead
+(fred-deployment-factory's docs/LOCAL-DEVELOPMENT.md, "Work on unreleased fred").
 
 ---
 
